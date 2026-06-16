@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>National Student Portal</title>
+    <style>
+        /* Global & Reset */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        body { background-color: #f3f4f6; color: #1f2937; display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; overflow-x: hidden; transition: background-color 0.5s ease; padding: 2rem 1rem; position: relative; }
+        
+        /* Containers */
+        .stage { display: none; width: 100%; max-width: 600px; opacity: 0; transform: scale(0.95); transition: opacity 0.5s ease, transform 0.5s ease; z-index: 10; margin-bottom: 2rem; }
+        .stage.active { display: block; opacity: 1; transform: scale(1); }
+        
+        /* The "Fake" Convincing UI (Stage 1) */
+        #stage-1 { max-width: 450px; background: white; padding: 2.5rem 2rem; border-radius: 8px; box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); text-align: center; }
+        .logo-container { width: 60px; height: 60px; background: #2563eb; border-radius: 12px; display: flex; justify-content: center; align-items: center; margin: 0 auto 1.5rem auto; }
+        .logo-container svg { width: 32px; height: 32px; fill: white; }
+        h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 0.5rem; color: #111827; }
+        p.subtitle { color: #6b7280; font-size: 0.95rem; margin-bottom: 1.5rem; line-height: 1.4; }
+        
+        .input-group { text-align: left; margin-bottom: 1.1rem; }
+        .input-group label { display: block; font-size: 0.85rem; font-weight: 600; margin-bottom: 0.4rem; color: #374151; }
+        .input-group input, .input-group select { width: 100%; padding: 0.75rem 1rem; border: 1px solid #d1d5db; border-radius: 6px; font-size: 0.95rem; outline: none; transition: border-color 0.2s, box-shadow 0.2s; background: white; }
+        .input-group input:focus, .input-group select:focus { border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1); }
+        .input-row { display: flex; gap: 1rem; }
+        .input-row .input-group { flex: 1; }
+        
+        .btn { width: 100%; padding: 0.875rem; background: #2563eb; color: white; border: none; border-radius: 6px; font-size: 1rem; font-weight: 600; cursor: pointer; transition: background 0.2s; margin-top: 0.5rem; }
+        .btn:hover { background: #1d4ed8; }
+        .btn:disabled { background: #9ca3af; cursor: not-allowed; }
+        .footer-text { margin-top: 1.5rem; font-size: 0.75rem; color: #9ca3af; line-height: 1.4; }
+
+        /* Loader */
+        .loader { border: 3px solid #f3f3f3; border-top: 3px solid #2563eb; border-radius: 50%; width: 20px; height: 20px; animation: spin 1s linear infinite; display: inline-block; vertical-align: middle; margin-right: 8px; display: none; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Stage 2 & Beyond (Dark Mode / Hacked UI) */
+        .red-alert { background-color: #0f172a !important; color: white !important; }
+        
+        .glitch-text { font-size: 3rem; font-weight: 900; color: #fca5a5; text-transform: uppercase; margin-bottom: 1rem; position: relative; animation: glitch 1s infinite; }
+        @keyframes glitch {
+            0% { text-shadow: 2px 2px #ef4444, -2px -2px #000; }
+            25% { text-shadow: -2px 2px #ef4444, 2px -2px #000; }
+            50% { text-shadow: 2px -2px #ef4444, -2px 2px #000; }
+            75% { text-shadow: -2px -2px #ef4444, 2px 2px #000; }
+            100% { text-shadow: 2px 2px #ef4444, -2px -2px #000; }
+        }
+
+        .hacked-data { background: rgba(0,0,0,0.4); padding: 1.5rem; border-left: 4px solid #ef4444; border-radius: 0 8px 8px 0; font-family: monospace; font-size: 1.05rem; margin: 2rem 0; word-break: break-all; color: #34d399; line-height: 1.5; }
+        
+        .lesson-box { background: rgba(255,255,255,0.05); padding: 1.5rem; border-radius: 8px; margin-top: 1.5rem; line-height: 1.6; border: 1px solid rgba(255,255,255,0.1); }
+        .lesson-box h3 { color: #fca5a5; margin-bottom: 0.5rem; font-size: 1.25rem; }
+        .lesson-box ul { margin-left: 1.5rem; margin-top: 0.5rem; color: #cbd5e1; }
+        .lesson-box li { margin-bottom: 0.5rem; }
+
+        /* Animal Verification Grid */
+        .captcha-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 1.5rem; }
+        .captcha-img { width: 100%; height: 200px; object-fit: cover; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: transform 0.2s; background-color: #1e293b; }
+        .captcha-img:hover { transform: scale(1.05); border-color: #38bdf8; }
+
+        /* Fake Download Link */
+        .fake-download { display: inline-block; background: #1e293b; padding: 1rem 2rem; border-radius: 8px; border: 1px solid #475569; text-decoration: none; color: #38bdf8; font-weight: bold; font-family: monospace; font-size: 1.2rem; margin: 2rem 0; transition: background 0.2s; }
+        .fake-download:hover { background: #334155; }
+        .fake-download span { color: #94a3b8; font-size: 0.9rem; font-weight: normal; display: block; margin-top: 0.5rem; }
+
+        .meta-twist { margin-top: 2rem; padding: 1.5rem; border: 1px dashed #fca5a5; border-radius: 8px; text-align: left; font-weight: normal; color: #f87171; background: rgba(239, 68, 68, 0.05); line-height: 1.6; }
+        
+        .taunt-section { margin-top: 2rem; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 2rem; text-align: center; }
+        .taunt-text { font-size: 1.8rem; font-weight: 900; color: #38bdf8; text-transform: uppercase; margin-bottom: 1rem; }
+        .taunt-gif { max-width: 100%; border-radius: 8px; margin-top: 1rem; }
+
+        .safe-disclaimer { margin-top: 1.5rem; padding: 1.25rem; border: 1px solid #10b981; border-radius: 8px; text-align: left; font-weight: normal; color: #10b981; background: rgba(16, 185, 129, 0.05); line-height: 1.5; font-size: 0.95rem; }
+
+        /* Stage 6 Resources Directory Layout */
+        .resource-card { background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 1.25rem; margin-top: 1rem; text-align: left; }
+        .resource-card h4 { color: #38bdf8; margin-bottom: 0.5rem; font-size: 1.1rem; }
+        .resource-card p { color: #94a3b8; font-size: 0.9rem; line-height: 1.4; margin-bottom: 0.75rem; }
+        .resource-link { color: #fca5a5; font-weight: bold; text-decoration: none; font-size: 0.95rem; display: inline-flex; align-items: center; gap: 5px; }
+        .resource-link:hover { text-decoration: underline; color: #ef4444; }
+    </style>
+</head>
+<body>
+
+    <!-- STAGE 1: THE SPOOF -->
+    <div id="stage-1" class="stage active">
+        <div class="logo-container">
+            <svg viewBox="0 0 24 24">
+                <path d="M12 3L1 9l4 2.18v6L12 21l7-3.82v-6l2.12-1.15V17h2V9L12 3zm6.82 6L12 12.72 5.18 9 12 5.28 18.82 9zM17 15.99l-5 2.73-5-2.73v-3.72l5 2.73 5-2.73v3.72z"/>
+            </svg>
+        </div>
+        <h1>Student Status Check</h1>
+        <p class="subtitle">Please verify your details to check your current enrollment eligibility and status.</p>
+        
+        <div class="input-group">
+            <label for="fullName">Full Legal Name *</label>
+            <input type="text" id="fullName" placeholder="e.g. John Doe" autocomplete="off" required>
+        </div>
+        
+        <div class="input-group">
+            <label for="collegeName">Institution / College Name *</label>
+            <input type="text" id="collegeName" placeholder="e.g. State University" autocomplete="off" required>
+        </div>
+
+        <div class="input-row">
+            <div class="input-group">
+                <label for="studentId">Student ID Number *</label>
+                <input type="text" id="studentId" placeholder="ID / Roll No." autocomplete="off" required>
+            </div>
+            <div class="input-group">
+                <label for="dob">Date of Birth *</label>
+                <input type="date" id="dob" required>
+            </div>
+        </div>
+
+        <div class="input-group">
+            <label for="state">State / Province *</label>
+            <input type="text" id="state" placeholder="Where is your college located?" autocomplete="off" required>
+        </div>
+        
+        <button class="btn" id="submitBtn" onclick="processData()">
+            <span class="loader" id="btnLoader"></span>
+            <span id="btnText">Verify Eligibility</span>
+        </button>
+
+        <p class="footer-text">Protected by Academic Verification Services SSL. <br> False declarations are subject to penalty.</p>
+    </div>
+
+    <!-- STAGE 2: FORM REVEAL -->
+    <div id="stage-2" class="stage">
+        <h1 class="glitch-text">COMPROMISED.</h1>
+        <p style="font-size: 1.2rem; color: #94a3b8;">You just willingly handed over sensitive profiling data to a complete stranger.</p>
+
+        <div class="hacked-data" id="capturedData">
+            <!-- JS injects data here -->
+        </div>
+
+        <div class="lesson-box">
+            <h3>Why did you fall for this?</h3>
+            <ul>
+                <li><strong>Broad Authority:</strong> Asking for a "Status Check" is vague but sounds highly official. It applies to everyone.</li>
+                <li><strong>The Illusion of Security:</strong> Words like "Legal Name" and "False declarations subject to penalty" actually make fake forms feel <em>more</em> real.</li>
+                <li><strong>Data Aggregation:</strong> Scammers don't need your password immediately. By collecting your Name, DOB, and Location, they can answer security questions or craft highly personalized phishing emails later.</li>
+            </ul>
+        </div>
+        
+        <button class="btn" style="background: #38bdf8; color: #0f172a; margin-top: 2rem;" onclick="nextStage(3)">Continue Security Check &rarr;</button>
+    </div>
+
+    <!-- STAGE 3: THE ANIMAL TEST (FIXED HIGH-STABILITY IMAGES) -->
+    <div id="stage-3" class="stage">
+        <h2 style="color: white; margin-bottom: 1rem;">Human Verification</h2>
+        <p style="color: #94a3b8; font-size: 1.1rem;">Before we issue your status report, please prove you are not a bot.</p>
+        <p style="color: #ef4444; font-weight: bold; margin-top: 1rem;">Click the CAT to proceed.</p>
+
+        <div class="captcha-grid">
+            <!-- Stable, high-availability animal URLs -->
+            <img src="https://images.unsplash.com/photo-1543466835-00a7907e9de1?w=400&auto=format&fit=crop&q=80" class="captcha-img" alt="Dog" onclick="wrongAnimal()">
+            <img src="https://images.unsplash.com/photo-1564349683136-77e08dba1ef7?w=400&auto=format&fit=crop&q=80" class="captcha-img" alt="Panda" onclick="wrongAnimal()">
+            <img src="https://images.unsplash.com/photo-1514888286974-6c03e2ca1dba?w=400&auto=format&fit=crop&q=80" class="captcha-img" alt="The Cat" onclick="failCatTest()">
+            <img src="https://images.unsplash.com/photo-1474511320723-9a56873867b5?w=400&auto=format&fit=crop&q=80" class="captcha-img" alt="Fox" onclick="wrongAnimal()">
+        </div>
+
+        <div id="cat-fail-reveal" style="display: none;">
+            <div class="lesson-box" style="border-color: #ef4444; background: rgba(239, 68, 68, 0.1);">
+                <h3 style="color: #ef4444;">🚨 MALWARE PAYLOAD EXECUTED</h3>
+                <p style="color: #cbd5e1; margin-top: 0.5rem;">Did you just click that image blindly because the site told you to?</p>
+                <ul style="margin-top: 1rem;">
+                    <li><strong>Drive-by Downloads:</strong> Clicking targets on unfamiliar interfaces can trigger hidden scripts or unwanted asset requests in the background.</li>
+                    <li><strong>Blind Trust:</strong> You assumed a "human verification" step was safe because it's a familiar interface pattern. Scammers abuse that trust every single day.</li>
+                </ul>
+            </div>
+            <button class="btn" style="background: #38bdf8; color: #0f172a; margin-top: 2rem;" onclick="nextStage(4)">View Final Assessment &rarr;</button>
+        </div>
+    </div>
+
+    <!-- STAGE 4: RICK ROLL, TAUNT & FINAL TWIST -->
+    <div id="stage-4" class="stage" style="text-align: center;">
+        <h2 style="color: white;">Assessment Complete.</h2>
+        <p style="color: #94a3b8; margin-top: 1rem; font-size: 1.1rem;">You have survived the simulation. You may now download your official clearance certificate.</p>
+
+        <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" class="fake-download" onclick="revealMetaTwist()">
+            📄 Download_Status_Report_Final.pdf
+            <span>(Hover over this before you click. Look at the bottom-left of your screen. Where does it actually go?)</span>
+        </a>
+
+        <div id="meta-twist-reveal" style="display: none;">
+            
+            <div class="meta-twist">
+                <h3 style="color: #ef4444; margin-bottom: 1rem;">Wait... think about this for a second.</h3>
+                Even clicking the link you received to get to *this exact awareness website* was a risk. <br><br>
+                What if I wasn't just grabbing your name and showing you cat pictures? What if the original link you clicked to open this site had executed a malicious script? What if my code silently stole your browser session cookies while you were reading this? <br><br>
+                <strong>The Ultimate Lesson:</strong> Never trust a link you didn't explicitly request or verify. You don't need to be gullible to get scammed. You only need one bad click.<br><br>
+                <em>(And if you clicked the PDF above... congratulations, you just got Rick Rolled.)</em>
+            </div>
+
+            <div class="taunt-section">
+                <div class="taunt-text">YOU THOUGHT U ARE SMART HUMAN</div>
+                <img src="https://cdn2.mememoe.com/wp-content/uploads/2026/04/Cat-Thinking-Meme-Template-768x432-1-300x300.webp" alt="Thinking Cat" class="taunt-gif">
+            </div>
+
+            <div id="safe-disclaimer" class="safe-disclaimer">
+                <strong>✅ Simulation Ended & You Are Safe:</strong> <br>
+                Please note that this website is a completely isolated, 100% safe, client-side educational tool. Absolutely no personal data, form inputs, or system information were collected, tracked, or transmitted to any server.
+            </div>
+
+            <button class="btn" style="background: transparent; border: 1px solid #38bdf8; color: #38bdf8; margin-top: 2rem;" onclick="nextStage(5)">Conclude Simulation</button>
+        </div>
+    </div>
+
+    <!-- STAGE 5: THE FUN INTERACTIVE REVEAL -->
+    <div id="stage-5" class="stage" style="text-align: center; margin-top: 15vh;">
+        <h1 style="color: #38bdf8; font-family: monospace; font-size: 2.5rem; margin-bottom: 0.5rem;">made by src</h1>
+        <p style="color: #cbd5e1; font-family: monospace; font-size: 1.4rem; margin-bottom: 2rem;">HII TO SRC</p>
+        
+        <button class="btn" style="max-width: 200px; margin: 0 auto 1.5rem auto;" onclick="sendHii()">SEND HII</button>
+        
+        <p id="hii-feedback" style="color: #ef4444; font-family: monospace; font-size: 1.5rem; margin-bottom: 2rem; font-weight: 900; letter-spacing: 1px; display: none;"></p>
+        
+        <button id="hub-transition-btn" class="btn" style="display: none; background: #10b981;" onclick="nextStage(6)">Access Educational Resources &rarr;</button>
+    </div>
+
+    <!-- STAGE 6: EDUCATIONAL HUB (SOCIAL ENGINEERING DOCUMENTATION) -->
+    <div id="stage-6" class="stage">
+        <h2 style="color: white; margin-bottom: 0.5rem; text-align: center;">Social Engineering Resource Hub</h2>
+        <p style="color: #94a3b8; text-align: center; margin-bottom: 2rem; font-size: 0.95rem;">Expand your practical knowledge using authorized, verified global platforms.</p>
+
+        <div class="resource-card">
+            <h4>📺 Educational Video Breakdowns</h4>
+            <p>Watch standard visual case studies breaking down real psychological manipulation vectors used by modern adversaries.</p>
+            <a href="https://www.youtube.com/watch?v=dQw4w9WgXcQ" target="_blank" class="resource-link">↳ Social Engineering Concepts (YouTube)</a>
+        </div>
+
+        <div class="resource-card">
+            <h4>🌐 Threat Analysis Frameworks</h4>
+            <p>Analyze official documentation detailing tactics, techniques, and procedures (TTPs) for initial phishing compromises.</p>
+            <a href="https://attack.mitre.org/tactics/TA0001/" target="_blank" class="resource-link">↳ MITRE ATT&CK Framework: Initial Access</a>
+        </div>
+
+        <div class="resource-card">
+            <h4>🛡️ Government Infrastructure Resources</h4>
+            <p>Review standard defensive toolkits and systemic infrastructure guidelines published by global tracking centers.</p>
+            <a href="https://www.cisa.gov/news-events/cybersecurity-advisories" target="_blank" class="resource-link">↳ CISA Security Advisories & Directives</a>
+        </div>
+
+        <div class="resource-card">
+            <h4>📋 Live Repository Registries</h4>
+            <p>Cross-reference community-driven tracking portals used to log active spoof attempts and reported domains globally.</p>
+            <a href="https://www.phishtank.com/" target="_blank" class="resource-link">↳ PhishTank Threat Registry Archive</a>
+        </div>
+
+        <button class="btn" style="background: transparent; border: 1px solid #ef4444; color: #ef4444; margin-top: 2rem;" onclick="location.reload()">Restart Sandbox Environment</button>
+    </div>
+
+    <script>
+        // Stage management
+        function switchStage(hideId, showId) {
+            const hideEl = document.getElementById(hideId);
+            const showEl = document.getElementById(showId);
+            
+            hideEl.style.transform = "scale(0.9)";
+            hideEl.style.opacity = "0";
+            
+            setTimeout(() => {
+                hideEl.classList.remove('active');
+                showEl.classList.add('active');
+                setTimeout(() => {
+                    showEl.style.opacity = "1";
+                    showEl.style.transform = "scale(1)";
+                }, 50);
+            }, 400);
+        }
+
+        function nextStage(stageNum) {
+            switchStage(`stage-${stageNum - 1}`, `stage-${stageNum}`);
+        }
+
+        // Stage 1 Logic & Strict Validation
+        function processData() {
+            const name = document.getElementById('fullName').value.trim();
+            const college = document.getElementById('collegeName').value.trim();
+            const id = document.getElementById('studentId').value.trim();
+            const dob = document.getElementById('dob').value;
+            const state = document.getElementById('state').value.trim();
+            
+            if (!name || !college || !id || !dob || !state) {
+                alert("Please fill out ALL required fields to proceed.");
+                return;
+            }
+
+            const btn = document.getElementById('submitBtn');
+            const loader = document.getElementById('btnLoader');
+            const btnText = document.getElementById('btnText');
+
+            btn.disabled = true;
+            loader.style.display = "inline-block";
+            btnText.innerText = " Querying Database...";
+
+            setTimeout(() => {
+                triggerReveal(name, college, id, dob, state);
+            }, 2000);
+        }
+
+        function triggerReveal(name, college, id, dob, state) {
+            document.body.classList.add('red-alert');
+            
+            const platform = navigator.platform;
+            const time = new Date().toLocaleTimeString();
+
+            document.getElementById('capturedData').innerHTML = `
+                > TARGET ACQUIRED: ${name.toUpperCase()}<br>
+                > DATE OF BIRTH: ${dob}<br>
+                > INSTITUTION: ${college.toUpperCase()}<br>
+                > LOCATION/STATE: ${state.toUpperCase()}<br>
+                > ID LOGGED: ${id}<br>
+                > OS/PLATFORM: ${platform}<br>
+                > UPLOADING TO REMOTE SERVER... [SUCCESS]
+            `;
+
+            switchStage('stage-1', 'stage-2');
+        }
+
+        // Stage 3 CAPTCHA Logic
+        function wrongAnimal() {
+            alert("Verification failed! That is not the cat. Please try again.");
+        }
+
+        function failCatTest() {
+            const images = document.querySelectorAll('.captcha-img');
+            images.forEach(img => {
+                img.style.filter = "grayscale(100%)";
+                img.style.cursor = "default";
+                img.onclick = null;
+            });
+
+            document.body.style.backgroundColor = "#7f1d1d";
+            setTimeout(() => { document.body.style.backgroundColor = ""; }, 200);
+
+            const reveal = document.getElementById('cat-fail-reveal');
+            reveal.style.display = "block";
+            reveal.scrollIntoView({ behavior: "smooth", block: "end" });
+        }
+
+        // Stage 4 Logic
+        function revealMetaTwist() {
+            setTimeout(() => {
+                const twistContainer = document.getElementById('meta-twist-reveal');
+                twistContainer.style.display = "block";
+                twistContainer.scrollIntoView({ behavior: "smooth", block: "end" });
+            }, 500); 
+        }
+
+        // Stage 5 Logic (Send Hii Button Trap)
+        function sendHii() {
+            const feedback = document.getElementById('hii-feedback');
+            const transitionBtn = document.getElementById('hub-transition-btn');
+            
+            feedback.innerText = "U FALLED AGAIN 💀";
+            feedback.style.display = "block";
+            transitionBtn.style.display = "block";
+        }
+    </script>
+</body>
+</html>
